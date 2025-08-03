@@ -33,8 +33,11 @@ class LeafNode(HtmlNode):
             return self.value
         if self.props:
             prop_string = super().props_to_html()
-            #print(f"PROP STRING: {prop_string}")
-            return f"<{self.tag}{prop_string}>{self.value}</{self.tag}>"
+            if self.tag != "img":
+                closing_tag = f"</{self.tag}>"
+            else:
+                closing_tag = ""
+            return f"<{self.tag}{prop_string}>{self.value}{closing_tag}"
         else:
             #print(f"NO PROPS")
             return f"<{self.tag}>{self.value}</{self.tag}>"
@@ -46,15 +49,17 @@ class ParentNode(HtmlNode):
         self.props = props
 
     def to_html(self):
-        string = ""
+        child_string = ""
         if self.tag == None:
             raise ValueError("No Tag found in Node(Required for parent)")
         elif self.children == None:
             raise ValueError("No Children")
         elif self.tag != None and self.children != None and self.children != []:
-
+            if self.props:
+                prop_string = super().props_to_html()
+            else: prop_string = ""
             for child in self.children:
-                string += child.to_html()
-            return f'<{self.tag}>{string}</{self.tag}>'
+                child_string += child.to_html()
+            return f'<{self.tag}{prop_string}>{child_string}</{self.tag}>'
         else:
             raise ValueError("Unknown Error")

@@ -1,6 +1,8 @@
 import unittest
 
+from textnode import TextType, TextNode
 from htmlnode import HtmlNode, LeafNode, ParentNode
+from main import text_node_to_html_node
 
 class TestHtmlNode(unittest.TestCase):
     # Test 1 Default Case
@@ -109,10 +111,38 @@ class TestParentNode(unittest.TestCase):
         parent_node2 = ParentNode("body", [parent_node, node])
         self.assertEqual(parent_node2.to_html(), "<body><div><span><b>grandchild</b></span></div><p>node_2_is_my_parent</p></body>")
     # parents with props
+    def test_parent_with_props(self):
+        child_node = LeafNode("p", "child_node")
+        parent_node = ParentNode("div", [child_node], {"style":"color:red;"})
+        self.assertEqual(parent_node.to_html(), '<div style="color:red;"><p>child_node</p></div>')
     # nested nodes with props
+    def test_child_and_parent_props(self):
+        child_node = LeafNode("p", "child_node", {"style":"color:blue;"})
+        parent_node = ParentNode("div", [child_node], {"style":"color:red;"})
+        self.assertEqual(parent_node.to_html(), '<div style="color:red;"><p style="color:blue;">child_node</p></div>')
     # list structure
+    def test_list_structure(self):
+        item1 = LeafNode("li", "Coffee")
+        item2 = LeafNode("li", "Tea")
+        item3 = LeafNode("li", "Milk")
+        list = ParentNode("ul", [item1,item2,item3])
+        self.assertEqual(list.to_html(), "<ul><li>Coffee</li><li>Tea</li><li>Milk</li></ul>")
     # table structure
-
+    def test_table_structure(self):
+        header1 = LeafNode("th", "Company")
+        header2 = LeafNode("th", "Contact")
+        header3 = LeafNode("th", "Country")
+        table_row1 = ParentNode("tr", [header1,header2,header3])
+        data1 = LeafNode("td", "Alfreds Futterkiste")
+        data2 = LeafNode("td", "Maria Anders")
+        data3 = LeafNode("td", "Germany")
+        table_row2 = ParentNode("tr", [data1,data2,data3])
+        data4 = LeafNode("td", "Centro comercial Moctezuma")
+        data5 = LeafNode("td", "Francisco Chang")
+        data6 = LeafNode("td", "Mexico")
+        table_row3 = ParentNode("tr", [data4,data5,data6])
+        table = ParentNode("table", [table_row1,table_row2,table_row3])
+        self.assertEqual(table.to_html(), "<table><tr><th>Company</th><th>Contact</th><th>Country</th></tr><tr><td>Alfreds Futterkiste</td><td>Maria Anders</td><td>Germany</td></tr><tr><td>Centro comercial Moctezuma</td><td>Francisco Chang</td><td>Mexico</td></tr></table>")
 
 if __name__ == "__main__":
     unittest.main()
