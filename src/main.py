@@ -1,5 +1,6 @@
 from textnode import TextNode , TextType
 from htmlnode import HtmlNode, LeafNode, ParentNode
+from nodemanager import split_nodes_delmiter
 
 def main():
     '''
@@ -14,6 +15,10 @@ def main():
         print(f"LEAF NODE HTML: {node.to_html()}")
         print(f'PARENT NODE HTML: {parent_node.children}')
     '''
+    node = TextNode("This is text with a `code block` word", TextType.TEXT)
+    new_nodes = split_nodes_delmiter([node], "`", TextType.CODE)
+    print(f"NEW NODES: {new_nodes}")
+    print(f'CONVERTED NODES: {split_nodes_delmiter([node], "`", TextType.CODE)}')
     pass
 
 def text_node_to_html_node(text_node):
