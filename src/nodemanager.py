@@ -1,42 +1,53 @@
-from htmlnode import HtmlNode, LeafNode, ParentNode
 from textnode import TextNode, TextType
+import re
 
 def split_nodes_delmiter(old_nodes, delimiter, text_type):
     converted_nodes = []
-    
-    if len(old_nodes) == 0:
+    if not old_nodes:
         raise ValueError("No nodes to split")
-    # Iterate through each node in the old_nodes list
-    for node in old_nodes:
-        if isinstance(node,TextNode):
-            if node.text.find(delimiter) != -1:
-                # Check if the Delimiter is closed
-                index1 = node.text.find(delimiter)
-                section_after_delimiter = node.text[index1:]
-                if section_after_delimiter.find(delimiter) == -1:
-                    raise ValueError("Unclosed delimiter found in text node")
-                else:
-                    # Split the text node by the delimiter
-                    parts = node.text.split(delimiter)
-                    # Create new TextNodes for each part
-                    before_delimiter = (TextNode(parts[0], TextType.TEXT))
-                    delim_section = (TextNode(parts[1], text_type))
-                    after_delimiter = (TextNode(parts[2], TextType.TEXT))
-                    # Check if len is 1 to avoid nested lists when only one node is passed
-                    # Than either append to converted_nodes and move continue loop or return the converted node
-                    if len(old_nodes) == 1:
-                        return [before_delimiter, delim_section, after_delimiter]
-                    else:
-                        converted_nodes.append([before_delimiter, delim_section, after_delimiter])
-            else:
-                # Means no delimiter found, so just append/return the original node
 
-                # Check if len is 1 to avoid nested lists when only one node is passed
-                if len(old_nodes) == 1:
-                    return [node]
-                else:
-                    converted_nodes.append(node)
-        else:
+    if not delimiter:
+        # Just return filtered original nodes (only TextType.TEXT are eligible)
+        converted_nodes = []
+        for node in old_nodes:
+            converted_nodes.append(node)
+        return converted_nodes
+
+    for node in old_nodes:
+        if not isinstance(node, TextNode):
             raise ValueError("Node is not a TextNode")
-    
+
+        if not delimiter:
+            if len(old_nodes) > 1:
+                converted_nodes.append(node)
+            else:
+                return old_nodes
+        text = node.text
+        re_delimiter = re.escape(delimiter)
+        pattern = pattern = rf'(?<!{re_delimiter}){re_delimiter}(?!{re_delimiter})(.+?)(?<!{re_delimiter}){re_delimiter}(?!{re_delimiter})'
+        matches = list(re.finditer(pattern, text))
+        if not matches:
+            converted_nodes.append(node)
+            continue
+
+        last_end = 0
+        for match in matches:
+            # Add unstyled text before the delimiter
+            if match.start() > last_end:
+                unstyled_text = text[last_end:match.start()]
+                if unstyled_text:
+                    converted_nodes.append(TextNode(unstyled_text, TextType.TEXT))
+
+            # Add styled (delimited) text
+            styled_text = match.group(1)
+            converted_nodes.append(TextNode(styled_text, text_type))
+
+            last_end = match.end()
+
+        # Add remaining unstyled text after the last match
+        if last_end < len(text):
+            remaining = text[last_end:]
+            if remaining:
+                converted_nodes.append(TextNode(remaining, TextType.TEXT))
+
     return converted_nodes
