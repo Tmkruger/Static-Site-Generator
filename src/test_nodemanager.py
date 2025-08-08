@@ -1,7 +1,7 @@
 import unittest
 
 from textnode import TextNode, TextType
-from nodemanager import split_nodes_delmiter
+from nodemanager import extract_markdown_links, split_nodes_delmiter, extract_markdown_images, split_nodes_image, split_nodes_link
 
 
 
@@ -50,3 +50,242 @@ class TestSplitNodeDelimiter(unittest.TestCase):
         nodes = [node,node2,node3]
         new_nodes = split_nodes_delmiter(nodes, "", TextType.ITALIC)
         self.assertEqual(new_nodes, nodes)
+
+class TestExtractImage(unittest.TestCase):
+    def test_default(self):
+        text = "This is text with a ![rick roll](https://i.imgur.com/aKaOqIh.gif) and ![obi wan](https://i.imgur.com/fJRm4Vk.jpeg)"
+        matches = extract_markdown_images(text)
+        self.assertEqual(matches, [("rick roll", "https://i.imgur.com/aKaOqIh.gif"), ("obi wan", "https://i.imgur.com/fJRm4Vk.jpeg")])
+
+    def test_no_text(self):
+        text = "![rick roll](https://i.imgur.com/aKaOqIh.gif)![obi wan](https://i.imgur.com/fJRm4Vk.jpeg)"
+        matches = extract_markdown_images(text)
+        self.assertEqual(matches, [("rick roll", "https://i.imgur.com/aKaOqIh.gif"), ("obi wan", "https://i.imgur.com/fJRm4Vk.jpeg")])
+
+    def test_missing_exclamation(self):
+            text = "[rick roll](https://i.imgur.com/aKaOqIh.gif)![obi wan](https://i.imgur.com/fJRm4Vk.jpeg)"
+            matches = extract_markdown_images(text)
+            self.assertEqual(matches, [("obi wan", "https://i.imgur.com/fJRm4Vk.jpeg")])
+
+    def test_malformed(self):
+            text = "![rick roll(https://i.imgur.com/aKaOqIh.gif)![obi wan](https://i.imgur.com/fJRm4Vk.jpeg)"
+            matches = extract_markdown_images(text)
+            self.assertEqual(matches, [("obi wan", "https://i.imgur.com/fJRm4Vk.jpeg")])
+
+    def test_nested(self):
+        text = "[![rick roll](https://i.imgur.com/aKaOqIh.gif)](https://i.imgur.com/fJRm4Vk.jpeg)"
+        matches = extract_markdown_images(text)
+        self.assertEqual(matches, [("rick roll", "https://i.imgur.com/aKaOqIh.gif")])
+
+    def test_special_characters(self):
+        text = "This is text with a ![rick & roll](https://i.imgur.com/aKaOqIh.gif) and ![obi wan](https://i.imgur.com/fJRm4Vk.jpeg)"
+        matches = extract_markdown_images(text)
+        self.assertEqual(matches, [("rick & roll", "https://i.imgur.com/aKaOqIh.gif"), ("obi wan", "https://i.imgur.com/fJRm4Vk.jpeg")])
+
+    def test_no_url(self):
+        text = "This is text with a ![rick roll]() and ![obi wan](https://i.imgur.com/fJRm4Vk.jpeg)"
+        matches = extract_markdown_images(text)
+        self.assertEqual(matches, [("rick roll", ""), ("obi wan", "https://i.imgur.com/fJRm4Vk.jpeg")])
+
+    def test_extra_parenthesis(self):
+        text = "This is text with a ![rick roll]() and ![obi wan](https://i.imgur.com/fJRm(4Vk.jpeg)"
+        matches = extract_markdown_images(text)
+        self.assertEqual(matches, [("rick roll", ""), ("obi wan", "https://i.imgur.com/fJRm(4Vk.jpeg")])
+
+class TestExtractLink(unittest.TestCase):
+    def test_default(self):
+        matches = extract_markdown_links(
+            "This is a link to [youtube](https://www.youtube.com)"
+        )
+        self.assertListEqual([("youtube", "https://www.youtube.com")], matches)
+
+    def test_no_text(self):
+        matches = extract_markdown_links(
+            "[youtube](https://www.youtube.com)"
+        )
+        self.assertListEqual([("youtube", "https://www.youtube.com")], matches)
+
+    def test_malformed_link(self):
+        matches = extract_markdown_links(
+            "This is a link to [youtube](https:www.youtube.com)"
+        )
+        self.assertListEqual([("youtube", "https:www.youtube.com")], matches)
+
+    def test_malformed(self):
+        matches = extract_markdown_links(
+            "This is a link to [youtube(https://www.youtube.com)"
+        )
+        self.assertListEqual([], matches)
+
+    def test_nested(self):
+        matches = extract_markdown_links(
+            "This is a link to [youtube]([instagram](https://instagram.com)])"
+        )
+        self.assertListEqual([("instagram", "https://instagram.com")], matches)
+
+    def test_special_characters(self):
+        matches = extract_markdown_links(
+            "This is a link to [youtube](https://www.you@tube.com)"
+        )
+        self.assertListEqual([("youtube", "https://www.you@tube.com")], matches)
+
+    def test_no_url(self):
+        matches = extract_markdown_links(
+            "This is a link to [youtube]()"
+        )
+        self.assertListEqual([("youtube", "")], matches)
+
+class TestSplitNodeImage(unittest.TestCase):
+
+    def test_split_no_image(self):
+        node = TextNode(
+            "This is text that has no markdown",
+            TextType.TEXT,
+        )
+        new_nodes = split_nodes_image([node])
+        self.assertListEqual(
+            [
+                TextNode("This is text that has no markdown", TextType.TEXT),
+            ],
+            new_nodes,
+        )
+
+    def test_split_single_image(self):
+        node = TextNode(
+            "This is text with an ![image](https://i.imgur.com/3elNhQu.png)",
+            TextType.TEXT,
+        )
+        new_nodes = split_nodes_image([node])
+        self.assertListEqual(
+            [
+                TextNode("This is text with an ", TextType.TEXT),
+                TextNode(
+                    "image", TextType.IMAGE, "https://i.imgur.com/3elNhQu.png"
+                ),
+            ],
+            new_nodes,
+        )
+
+    def test_split_multiple_images(self):
+        node = TextNode(
+            "This is text with an ![image](https://i.imgur.com/zjjcJKZ.png) and another ![second image](https://i.imgur.com/3elNhQu.png)",
+            TextType.TEXT,
+        )
+        new_nodes = split_nodes_image([node])
+        self.assertListEqual(
+            [
+                TextNode("This is text with an ", TextType.TEXT),
+                TextNode("image", TextType.IMAGE, "https://i.imgur.com/zjjcJKZ.png"),
+                TextNode(" and another ", TextType.TEXT),
+                TextNode(
+                    "second image", TextType.IMAGE, "https://i.imgur.com/3elNhQu.png"
+                ),
+            ],
+            new_nodes,
+        )
+
+        def test_split_images_with_link(self):
+            node = TextNode(
+                "This is text with an [youtube](https://youtube.com) and a ![second image](https://i.imgur.com/3elNhQu.png)",
+                TextType.TEXT,
+            )
+            new_nodes = split_nodes_image([node])
+            self.assertListEqual(
+                [
+                    TextNode("This is text with an [youtube](https://youtube.com) and a ", TextType.TEXT),
+                    TextNode(
+                        "second image", TextType.IMAGE, "https://i.imgur.com/3elNhQu.png"
+                    ),
+                ],
+                new_nodes,
+            )
+############################################################
+    def test_split_image_beg_end(self):
+        node = TextNode(
+            "![image](https://i.imgur.com/1elNhQu.png) is the first image, and ![second image](https://i.imgur.com/2elNhQu.png) as well as ![third image](https://i.imgur.com/3elNhQu.png)",
+            TextType.TEXT,
+        )
+        new_nodes = split_nodes_image([node])
+        self.assertListEqual(
+            [
+                TextNode("image", TextType.IMAGE, "https://i.imgur.com/1elNhQu.png"),
+                TextNode(" is the first image, and ", TextType.TEXT),
+                TextNode("second image", TextType.IMAGE, "https://i.imgur.com/2elNhQu.png"),
+                TextNode(" as well as ", TextType.TEXT),
+                TextNode("third image", TextType.IMAGE, "https://i.imgur.com/3elNhQu.png")
+            ],
+            new_nodes,
+        )
+
+
+    def test_split_only_image(self):
+        node = TextNode(
+            "![image](https://i.imgur.com/3elNhQu.png)",
+            TextType.TEXT,
+        )
+        new_nodes = split_nodes_image([node])
+        self.assertListEqual(
+            [
+                TextNode(
+                    "image", TextType.IMAGE, "https://i.imgur.com/3elNhQu.png"
+                ),
+            ],
+            new_nodes,
+        )
+
+    def test_split_image_no_alt(self):
+        node = TextNode(
+            "This is text with an ![](https://i.imgur.com/3elNhQu.png)",
+            TextType.TEXT,
+        )
+        new_nodes = split_nodes_image([node])
+        self.assertListEqual(
+            [
+                TextNode("This is text with an ", TextType.TEXT),
+                TextNode(
+                    "", TextType.IMAGE, "https://i.imgur.com/3elNhQu.png"
+                ),
+            ],
+            new_nodes,
+        )
+
+    def test_split_image_complex_url(self):
+        node = TextNode(
+            "This is text with an ![image](https://example.com/path/image.png?param=value)",
+            TextType.TEXT,
+        )
+        new_nodes = split_nodes_image([node])
+        self.assertListEqual(
+            [
+                TextNode("This is text with an ", TextType.TEXT),
+                TextNode(
+                    "image", TextType.IMAGE, "https://example.com/path/image.png?param=value"
+                ),
+            ],
+            new_nodes,
+        )
+
+    def test_split_image_multiple_nodes(self):
+        node = TextNode(
+            "This is text with an ![image](https://i.imgur.com/3elNhQu.png)",
+            TextType.TEXT,
+        )
+        node2 = TextNode(
+            "This is text with an ![image](https://example.com/path/image.png?param=value)",
+            TextType.TEXT,
+        )
+        new_nodes = split_nodes_image([node,node2])
+        self.assertListEqual(
+            [
+                TextNode("This is text with an ", TextType.TEXT),
+                TextNode(
+                    "image", TextType.IMAGE, "https://i.imgur.com/3elNhQu.png"
+                ),
+                TextNode("This is text with an ", TextType.TEXT),
+                TextNode(
+                    "image", TextType.IMAGE, "https://example.com/path/image.png?param=value"
+                ),
+
+            ],
+            new_nodes,
+        )
