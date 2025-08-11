@@ -83,16 +83,50 @@ def split_nodes_image(old_nodes):
             image_link = match[1]
             sections = text.split(f"![{image_alt}]({image_link})", 1)
             for section in sections:
-                print(f"SECTION! : {section}!!!")
+                #print(f"SECTION! : {section}!!!")
                 if not extract_markdown_images(section) and section != "":
                     converted_nodes.append(TextNode(section, TextType.TEXT))
                 if TextNode(image_alt, TextType.IMAGE, image_link) not in converted_nodes:
                     converted_nodes.append(TextNode(image_alt, TextType.IMAGE, image_link))
+            text = sections[len(sections)-1]
+            #print(f"SECTIONS: {sections}")
+            # Add styled (delimited) text
+    #print(f"CONVERTED_NODES : {converted_nodes}")
+    return converted_nodes
+
+def split_nodes_link(old_nodes):
+    converted_nodes = []
+    if not old_nodes:
+        raise ValueError("No nodes to split")
+
+    for node in old_nodes:
+        if not isinstance(node, TextNode):
+            raise ValueError("Node is not a TextNode")
+
+        text = node.text
+
+        matches = extract_markdown_links(text)
+        if not matches:
+            converted_nodes.append(node)
+            continue
+        print(f"MATCHES: {matches}")
+        for match in matches:
+            print(f"TEXT: {text}")
+            print(f"MATCH: {match}")
+            link_alt = match[0]
+            link_url = match[1]
+            sections = text.split(f"[{link_alt}]({link_url})", 1)
+            for section in sections:
+                print(f"SECTION! : {section}!!!")
+                if not extract_markdown_links(section) and section != "":
+                    converted_nodes.append(TextNode(section, TextType.TEXT))
+                elif TextNode(link_alt, TextType.LINK, link_url) not in converted_nodes:
+                    converted_nodes.append(TextNode(link_alt, TextType.LINK, link_url))
             text = sections[len(sections)-1]
             print(f"SECTIONS: {sections}")
             # Add styled (delimited) text
     print(f"CONVERTED_NODES : {converted_nodes}")
     return converted_nodes
 
-def split_nodes_link(old_nodes):
-    pass
+def text_to_textnodes(text):
+    converted_nodes = split_nodes_image(text)
