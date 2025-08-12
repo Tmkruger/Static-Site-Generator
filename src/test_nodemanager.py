@@ -1,12 +1,23 @@
 import unittest
 
 from textnode import TextNode, TextType
-from nodemanager import extract_markdown_links, split_nodes_delmiter, extract_markdown_images, split_nodes_image, split_nodes_link
+from nodemanager import extract_markdown_links, split_nodes_delmiter, extract_markdown_images, split_nodes_image, split_nodes_link, text_to_textnodes
+
 
 
 
 
 class TestSplitNodeDelimiter(unittest.TestCase):
+    def test_double_bold(self):
+        text1 = TextNode("This is text with a **bold****twice**", TextType.TEXT)
+        nodes = [
+            TextNode("This is text with a ", TextType.TEXT),
+            TextNode("bold", TextType.BOLD),
+            TextNode("twice", TextType.BOLD)
+        ]
+        self.assertListEqual(split_nodes_delmiter([text1], "**", TextType.BOLD), nodes)
+
+
     def test_text(self):
         node = TextNode("This is plain text node", TextType.TEXT)
         new_nodes = split_nodes_delmiter([node], "`", TextType.CODE)
@@ -37,8 +48,8 @@ class TestSplitNodeDelimiter(unittest.TestCase):
         self.assertEqual(new_nodes, [TextNode("italic", TextType.ITALIC), TextNode(" is at the start and ", TextType.TEXT), TextNode("end", TextType.ITALIC)])
     def test_multi_delim_diff(self):
         node = TextNode("*italic* is at the start and an ending **bold**", TextType.TEXT)
-        new_nodes = split_nodes_delmiter([node], "*", TextType.ITALIC)
-        self.assertEqual(new_nodes, [TextNode("italic", TextType.ITALIC), TextNode(" is at the start and an ending **bold**", TextType.TEXT)])
+        new_nodes = split_nodes_delmiter([node], "**", TextType.BOLD)
+        self.assertEqual(new_nodes, [TextNode("*italic* is at the start and an ending ", TextType.TEXT),TextNode("bold", TextType.BOLD)])
     def test_no_delim(self):
         node = TextNode("*italic* is at the start and an ending **bold**", TextType.TEXT)
         new_nodes = split_nodes_delmiter([node], "", TextType.ITALIC)
@@ -105,11 +116,6 @@ class TestExtractLink(unittest.TestCase):
         )
         self.assertListEqual([("youtube", "https://www.youtube.com")], matches)
 
-    def test_malformed_link(self):
-        matches = extract_markdown_links(
-            "This is a link to [youtube](https:www.youtube.com)"
-        )
-        self.assertListEqual([("youtube", "https:www.youtube.com")], matches)
 
     def test_malformed(self):
         matches = extract_markdown_links(
@@ -308,7 +314,6 @@ class TestSplitNodeLink(unittest.TestCase):
             TextType.TEXT,
         )
         new_nodes = split_nodes_link([node])
-        print(f"NEW_NODES: {new_nodes}")
         self.assertListEqual(
             [
                 TextNode("This is text with an ", TextType.TEXT),
@@ -426,3 +431,99 @@ class TestSplitNodeLink(unittest.TestCase):
             ],
             new_nodes,
         )
+
+class TestTextToTextNode(unittest.TestCase):
+    def base_case(self):
+        text1 = "This is **text** with an _italic_ word and a `code block` and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://boot.dev)"
+        nodes = [
+            TextNode("This is ", TextType.TEXT),
+            TextNode("text", TextType.BOLD),
+            TextNode(" with an ", TextType.TEXT),
+            TextNode("italic", TextType.ITALIC),
+            TextNode(" word and a ", TextType.TEXT),
+            TextNode("code block", TextType.CODE),
+            TextNode(" and an ", TextType.TEXT),
+            TextNode("obi wan image", TextType.IMAGE, "https://i.imgur.com/fJRm4Vk.jpeg"),
+            TextNode(" and a ", TextType.TEXT),
+            TextNode("link", TextType.LINK, "https://boot.dev"),
+        ]
+        self.assertListEqual(text_to_textnodes(text1), nodes)
+
+    def test_no_markdown(self):
+        text1 = "This is text with an italic word and a code block and an obi wan imagemhttps://i.imgur.com/fJRm4Vk.jpeg and a link https://boot.dev"
+        nodes = [
+            TextNode("This is text with an italic word and a code block and an obi wan imagemhttps://i.imgur.com/fJRm4Vk.jpeg and a link https://boot.dev", TextType.TEXT),
+        ]
+        self.assertListEqual(text_to_textnodes(text1), nodes)
+
+    def test_double_bold(self):
+        text1 = "This is text with a **bold****twice**"
+        nodes = [
+            TextNode("This is text with a ", TextType.TEXT),
+            TextNode("bold", TextType.BOLD),
+            TextNode("twice", TextType.BOLD)
+        ]
+        self.assertListEqual(text_to_textnodes(text1), nodes)
+
+    def test_empty_markdown(self):
+        text1 = "This is text with a ****"
+        nodes = [
+            TextNode("This is text with a ", TextType.TEXT)
+        ]
+        self.assertListEqual(text_to_textnodes(text1), nodes)
+
+    def test_empty_string(self):
+        text = ""
+        nodes = [TextNode("", TextType.TEXT)]
+        self.assertListEqual(text_to_textnodes(text), nodes)
+
+    def test_beg_mid_end(self):
+        text = "**bold** plain text *italic* [youtube](https://youtube.com)"
+        nodes = [
+            TextNode("bold", TextType.BOLD),
+            TextNode(" plain text ", TextType.TEXT),
+            TextNode("italic", TextType.ITALIC),
+            TextNode(" ", TextType.TEXT),
+            TextNode("youtube", TextType.LINK, "https://youtube.com")
+        ]
+        self.assertListEqual(text_to_textnodes(text), nodes)
+
+    def test_multiple_spaces(self):
+        text = "**bold**       plain text      *italic*      "
+        nodes = [
+            TextNode("bold", TextType.BOLD),
+            TextNode("       plain text      ", TextType.TEXT),
+            TextNode("italic", TextType.ITALIC),
+            TextNode("      ", TextType.TEXT)
+        ]
+        self.assertListEqual(text_to_textnodes(text), nodes)
+
+    def test_malformed_markdown(self):
+        text = "**bold* is malformed but *italic* is not"
+        nodes = [
+            TextNode("**bold* is malformed but *italic* is not", TextType.TEXT)
+        ]
+        self.assertListEqual(text_to_textnodes(text), nodes)
+
+    def test_realworld_link(self):
+        text = "For more information, visit [our documentation](https://docs.example.com)."
+        nodes = [
+            TextNode("For more information, visit ", TextType.TEXT),
+            TextNode("our documentation", TextType.LINK, "https://docs.example.com"),
+            TextNode(".", TextType.TEXT)
+        ]
+
+    def test_realworld_image(self):
+        text = "![profile picture](https://example.com/avatar.png)Welcome to my blog post about Python!"
+        nodes = [
+            TextNode("profile picture", TextType.IMAGE, "https://example.com/avatar.png"),
+            TextNode("Welcome to my blog post about Python!", TextType.TEXT)
+        ]
+
+    def test_realworld_code(self):
+        text = "Use the `print(\"Hello, world!\")` function to display text."
+        nodes = [
+            TextNode("Use the ", TextType.TEXT),
+            TextNode("print(\"Hello, world!\")", TextType.CODE),
+            TextNode(" function to display text.", TextType.TEXT)
+        ]

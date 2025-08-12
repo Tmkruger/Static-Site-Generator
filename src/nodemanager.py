@@ -7,24 +7,26 @@ def split_nodes_delmiter(old_nodes, delimiter, text_type):
         raise ValueError("No nodes to split")
 
     if not delimiter:
-        # Just return filtered original nodes (only TextType.TEXT are eligible)
-        converted_nodes = []
+        # Return a shallow copy of the original list
         for node in old_nodes:
             converted_nodes.append(node)
         return converted_nodes
+
+    re_delim = re.escape(delimiter)
+    # Match the same opener/closer via \1 and allow back-to-back like **a****b**
+    # Escaped delimiters (e.g., \**) are ignored via (?<!\\)
+    pattern = rf'(?<!\\)({re_delim})(.*?)\1'
 
     for node in old_nodes:
         if not isinstance(node, TextNode):
             raise ValueError("Node is not a TextNode")
 
-        if not delimiter:
-            if len(old_nodes) > 1:
-                converted_nodes.append(node)
-            else:
-                return old_nodes
-        text = node.text
-        re_delimiter = re.escape(delimiter)
-        pattern = pattern = rf'(?<!{re_delimiter}){re_delimiter}(?!{re_delimiter})(.+?)(?<!{re_delimiter}){re_delimiter}(?!{re_delimiter})'
+        text = node.text or ""
+        if text.count(delimiter) % 2 != 0:
+            # Handle malformed case — maybe treat everything as plain text
+            converted_nodes.append(TextNode(text, TextType.TEXT))
+            continue
+
         matches = list(re.finditer(pattern, text))
         if not matches:
             converted_nodes.append(node)
@@ -32,19 +34,20 @@ def split_nodes_delmiter(old_nodes, delimiter, text_type):
 
         last_end = 0
         for match in matches:
-            # Add unstyled text before the delimiter
+            # Unstyled text before the match
             if match.start() > last_end:
                 unstyled_text = text[last_end:match.start()]
                 if unstyled_text:
                     converted_nodes.append(TextNode(unstyled_text, TextType.TEXT))
 
-            # Add styled (delimited) text
-            styled_text = match.group(1)
-            converted_nodes.append(TextNode(styled_text, text_type))
+            # Styled (delimited) inner text (group 2)
+            styled_text = match.group(2)
+            if styled_text:
+                converted_nodes.append(TextNode(styled_text, text_type))
 
             last_end = match.end()
 
-        # Add remaining unstyled text after the last match
+        # Trailing unstyled text
         if last_end < len(text):
             remaining = text[last_end:]
             if remaining:
@@ -109,24 +112,36 @@ def split_nodes_link(old_nodes):
         if not matches:
             converted_nodes.append(node)
             continue
-        print(f"MATCHES: {matches}")
         for match in matches:
-            print(f"TEXT: {text}")
-            print(f"MATCH: {match}")
             link_alt = match[0]
             link_url = match[1]
             sections = text.split(f"[{link_alt}]({link_url})", 1)
             for section in sections:
-                print(f"SECTION! : {section}!!!")
                 if not extract_markdown_links(section) and section != "":
                     converted_nodes.append(TextNode(section, TextType.TEXT))
                 elif TextNode(link_alt, TextType.LINK, link_url) not in converted_nodes:
                     converted_nodes.append(TextNode(link_alt, TextType.LINK, link_url))
             text = sections[len(sections)-1]
-            print(f"SECTIONS: {sections}")
             # Add styled (delimited) text
-    print(f"CONVERTED_NODES : {converted_nodes}")
     return converted_nodes
 
 def text_to_textnodes(text):
-    converted_nodes = split_nodes_image(text)
+    node = TextNode(text, TextType.TEXT)
+    converted_nodes = split_nodes_image([node])
+    for section in converted_nodes:
+        if section.text_type is TextType.TEXT:
+            converted_nodes = split_nodes_link(converted_nodes)
+    for section in converted_nodes:
+        if section.text_type is TextType.TEXT:
+            converted_nodes = split_nodes_delmiter(converted_nodes, "**", TextType.BOLD)
+    for section in converted_nodes:
+        if section.text_type is TextType.TEXT:
+            converted_nodes = split_nodes_delmiter(converted_nodes, "*", TextType.ITALIC)
+    for section in converted_nodes:
+        if section.text_type is TextType.TEXT:
+            converted_nodes = split_nodes_delmiter(converted_nodes, "'", TextType.CODE)
+    return converted_nodes
+
+def find_malformed_delimiters(text, delimiter):
+    count = text.count(delimiter)
+    return count % 2 != 0
