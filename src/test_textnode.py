@@ -1,8 +1,8 @@
 import unittest
+from nodemanager import *
+from textnode import *
+from htmlnode import *
 
-from textnode import TextNode, TextType
-from htmlnode import HtmlNode, LeafNode
-from main import text_node_to_html_node
 
 
 

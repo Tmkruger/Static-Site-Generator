@@ -1,5 +1,15 @@
 from textnode import TextNode, TextType
+from htmlnode import *
+from enum import Enum
 import re
+
+class BlockType(Enum):
+    PARAGRAPH = "p"
+    HEADING = "h"
+    CODE = "code"
+    QUOTE = "blockquote"
+    U_LIST = "ul"
+    O_LIST = "ol"
 
 def split_nodes_delmiter(old_nodes, delimiter, text_type):
     converted_nodes = []
@@ -131,17 +141,72 @@ def text_to_textnodes(text):
     for section in converted_nodes:
         if section.text_type is TextType.TEXT:
             converted_nodes = split_nodes_link(converted_nodes)
-    for section in converted_nodes:
-        if section.text_type is TextType.TEXT:
             converted_nodes = split_nodes_delmiter(converted_nodes, "**", TextType.BOLD)
-    for section in converted_nodes:
-        if section.text_type is TextType.TEXT:
             converted_nodes = split_nodes_delmiter(converted_nodes, "*", TextType.ITALIC)
-    for section in converted_nodes:
-        if section.text_type is TextType.TEXT:
-            converted_nodes = split_nodes_delmiter(converted_nodes, "'", TextType.CODE)
+            converted_nodes = split_nodes_delmiter(converted_nodes, "_", TextType.ITALIC)
+            converted_nodes = split_nodes_delmiter(converted_nodes, "`", TextType.CODE)
     return converted_nodes
 
 def find_malformed_delimiters(text, delimiter):
     count = text.count(delimiter)
     return count % 2 != 0
+
+def markdown_to_blocks(markdown):
+    if markdown == "":
+        return []
+    blocks = []
+    temp = ""
+    sections = markdown.split("\n")
+    #print(f"ALL SECTIONS: {sections}")
+    start_of_block = True
+    for section in sections:
+        #print(f"SECTION: {section} | START OF BLOCK?: {start_of_block}")
+        #print(f"TEMP: {temp}| BLOCKS: {blocks}")
+        section = section.strip(" ")
+        if section == "" and temp == "":
+            #print("TURNING TRUE")
+            start_of_block = True
+            continue
+        elif start_of_block == True and section != "":
+            temp = section
+            #print("TURNING FALSE")
+            start_of_block = False
+        elif start_of_block == False and section !="":
+            temp+=f"\n{section}"
+        else:
+            blocks.append(temp)
+            temp = ""
+            start_of_block = True
+    return blocks
+
+def block_to_blocktype(block):
+    print(f"BLOCKTYPE BLOCK: {block}")
+    if re.match(r"^#{1,6} ", block):
+        return BlockType.HEADING
+    elif re.match(r"'''.*'''", block):
+        return BlockType.CODE
+    elif re.match(r"^>", block):
+        return BlockType.QUOTE
+    elif re.match(r"^- ", block):
+        return BlockType.U_LIST
+    elif re.match(r"^. ", block):
+        return BlockType.O_LIST
+    else:
+        return BlockType.PARAGRAPH
+
+def text_node_to_html_node(text_node):
+        match text_node.text_type:
+            case TextType.TEXT:
+                return LeafNode(None, text_node.text)
+            case TextType.BOLD:
+                return LeafNode("b", text_node.text)
+            case TextType.ITALIC:
+                return LeafNode("i", text_node.text)
+            case TextType.CODE:
+                return LeafNode("code", text_node.text)
+            case TextType.LINK:
+                return LeafNode("a", text_node.text, text_node.props)
+            case TextType.IMAGE:
+                return LeafNode("img", "", text_node.props)
+            case _:
+                raise ValueError("TextType not found")
