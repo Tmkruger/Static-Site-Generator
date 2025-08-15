@@ -183,7 +183,7 @@ def block_to_blocktype(block):
     print(f"BLOCKTYPE BLOCK: {block}")
     if re.match(r"^#{1,6} ", block):
         return BlockType.HEADING
-    elif re.match(r"'''.*'''", block):
+    elif block.startswith("```\n") and block.endswith("```"):
         return BlockType.CODE
     elif re.match(r"^>", block):
         return BlockType.QUOTE

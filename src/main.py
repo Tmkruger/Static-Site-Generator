@@ -6,19 +6,20 @@ from markdown_to_html import *
 
 def main():
     markdown = """
-    ### This is a **bolded** heading
-    """
+This is **bolded** paragraph
 
-    markdown2 = """
-    This is **bolded** paragraph
+This is another paragraph with *italic* text and code: `print("Hello World")` here
+This is _the_ same paragraph on a new line, ending **bold**
 
-    This is another paragraph with *italic* text and code: `print("Hello World")` here
-    This is _the_ same paragraph on a new line, ending **bold**
+```
+This is text that _should_ remain
+the **same** even with inline stuff
+```
 
-    - This is a list
-    - with items
-    """
-    markdown_to_html_node(markdown2)
+- This is a list
+- with items
+"""
+    markdown_to_html_node(markdown)
 
 
 

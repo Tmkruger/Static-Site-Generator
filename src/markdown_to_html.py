@@ -72,5 +72,9 @@ def strip_md_id(text, block_type):
             raise Exception("unknown block type")
 
 def text_to_code_node(text):
-
-    return ""
+    print(f'\nTEXT: {text}!!--!!\n')
+    block = text.lstrip("```\n")
+    block = block.rstrip("```")
+    child = LeafNode("code", block)
+    parent = ParentNode("pre", [child]).to_html()
+    return parent
