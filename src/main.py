@@ -2,13 +2,25 @@ from textnode import TextNode , TextType
 from htmlnode import HtmlNode, LeafNode, ParentNode
 from nodemanager import split_nodes_delmiter
 from markdown_to_html import *
+
+import re
 import os
 import shutil
 
 
 
 def main():
+    file_path = "content/index.md"
+    try:
+        with open(file_path, 'r') as file:
+            content = file.read()
+            print(content)
+    except FileNotFoundError:
+        print(f"Error: The file at {file_path} was not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}") 
     static_to_public("static", "public")
+    extract_title(content)
 
 def static_to_public(source, destination):
     print(f"SOURCE: {source} | DESTINATION: {destination}")
@@ -37,4 +49,11 @@ def static_to_public(source, destination):
         print(f"ADDING {source} TO {destination}")
         shutil.copy(source, destination)
 
+def extract_title(header):
+    if not re.match(r"(?<!#)# (.*)", header):
+        raise Exception("No Header")
+    else:
+        header1 = re.match(r"(?<!#)# (.*)", header).group(0)
+        header1 = header1.lstrip("# ")
+        print(header1)
 main()
