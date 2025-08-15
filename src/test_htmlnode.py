@@ -2,7 +2,8 @@ import unittest
 
 from textnode import TextType, TextNode
 from htmlnode import HtmlNode, LeafNode, ParentNode
-from main import text_node_to_html_node
+from nodemanager import *
+
 
 class TestHtmlNode(unittest.TestCase):
     # Test 1 Default Case
@@ -84,9 +85,7 @@ class TestParentNode(unittest.TestCase):
         grandchild_node = LeafNode("b", "grandchild")
         child_node = ParentNode("span", [grandchild_node])
         parent_node = ParentNode("div", [])
-        with self.assertRaises(ValueError) as error:
-            parent_node.to_html()
-        self.assertTrue(str(error.exception) == "Unknown Error")
+        self.assertEqual(parent_node.to_html(), "<div></div>")
     # multiple children
     def test_multiple_children(self):
         child_node1 = LeafNode("b", "node1")

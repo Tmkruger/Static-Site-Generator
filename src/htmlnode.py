@@ -61,5 +61,7 @@ class ParentNode(HtmlNode):
             for child in self.children:
                 child_string += child.to_html()
             return f'<{self.tag}{prop_string}>{child_string}</{self.tag}>'
+        elif child_string == "":
+            return f"<{self.tag}></{self.tag}>"
         else:
             raise ValueError("Unknown Error")

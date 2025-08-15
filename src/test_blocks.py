@@ -65,7 +65,7 @@ This is the same paragraph on a new line
 
     def test_whitespace(self):
         md = """
-  This is **bolded** paragraph
+This is **bolded** paragraph
 
 This is another paragraph with _italic_ text and `code` here
 This is the same paragraph on a new line
@@ -119,17 +119,13 @@ class TestBlockType(unittest.TestCase):
         self.assertEqual(block_type, BlockType.HEADING)
 
     def test_code(self):
-        block = "'''print(\"This is a code snippet\")'''"
+        block = "```print(\"This is a code snippet\")```"
         block_type = block_to_blocktype(block)
         self.assertEqual(block_type, BlockType.CODE)
 
     def test_code2(self):
-        block =  """```
-This is text that _should_ remain
-the **same** even with inline stuff
-```
-"""
-        block_type = block_to_blocktype(block)
+        code_block = r"```\nThis is text that _should_ remain\nthe **same** even with inline stuff\n```"
+        block_type = block_to_blocktype(code_block)
         self.assertEqual(block_type, BlockType.CODE)
 
     def test_quote(self):
@@ -156,6 +152,3 @@ the **same** even with inline stuff
         block = "##$ This wanted to be a heading"
         block_type = block_to_blocktype(block)
         self.assertEqual(block_type, BlockType.PARAGRAPH)
-
-class TestMarkdownToHTML(unittest.TestCase):
-    pass

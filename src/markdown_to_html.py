@@ -4,53 +4,56 @@ from nodemanager import *
 
 
 def markdown_to_html_node(markdown):
-    string = ""
+    if markdown == "":
+        return ParentNode("div", [])
+    nodes = []
     blocks = markdown_to_blocks(markdown)
     for block in blocks:
         block_type = block_to_blocktype(block)
-        print(f"Block: {block} | Block_Type: {block_type}")
+        #print(f"Block: {block} | Block_Type: {block_type}")
         children_nodes = text_to_children(block, block_type)
         match block_type:
             case BlockType.HEADING:
                 heading_count = block.count("#")
-                string += ParentNode(f"h{heading_count}", children_nodes).to_html()
+                nodes.append(ParentNode(f"h{heading_count}", children_nodes))
             case BlockType.CODE:
-                string += text_to_code_node(block)
+                nodes.append(text_to_code_node(block))
             case BlockType.QUOTE:
-                string += ParentNode("blockquote", children_nodes).to_html()
+                nodes.append(ParentNode("blockquote", children_nodes))
             case BlockType.U_LIST:
                 child_nodes = []
                 list_items = block.split("\n")
                 for item in list_items:
                     item = strip_md_id(item, block_type)
                     child_nodes.append(LeafNode("li", item))
-                string += ParentNode("ul", child_nodes).to_html()
+                nodes.append(ParentNode("ul", child_nodes))
             case BlockType.O_LIST:
                 child_nodes = []
                 list_items = block.split("\n")
                 for item in list_items:
                     item = strip_md_id(item, block_type)
                     child_nodes.append(LeafNode("li", item))
-                string += ParentNode("ol", child_nodes).to_html()
-
+                nodes.append(ParentNode("ol", child_nodes))
             case BlockType.PARAGRAPH:
-                string += ParentNode("p", children_nodes).to_html()
+                nodes.append(ParentNode("p", children_nodes))
             case _:
                 pass
-        print(f"STRING: {string}")
+    return ParentNode("div", nodes)
 
 
 def text_to_children(block, block_type):
     children = []
     block = strip_md_id(block, block_type)
     text_nodes = text_to_textnodes(block)
-    print(f"Text Nodes: {text_nodes}")
+    #print(f"Text Nodes: {text_nodes}")
     for node in text_nodes:
         children.append(text_node_to_html_node(node))
-    print(f"CHILDREN: {children}")
+    #print(f"CHILDREN: {children}")
     return children
 
 def strip_md_id(text, block_type):
+    text = text.replace("\n", " ")
+    #print(f"\nTEXT: {text}!!--!!\n")
     match block_type:
         case BlockType.HEADING:
             text = text.lstrip("#")
@@ -72,9 +75,9 @@ def strip_md_id(text, block_type):
             raise Exception("unknown block type")
 
 def text_to_code_node(text):
-    print(f'\nTEXT: {text}!!--!!\n')
+    #print(f'\nTEXT: {text}!!--!!\n')
     block = text.lstrip("```\n")
     block = block.rstrip("```")
     child = LeafNode("code", block)
-    parent = ParentNode("pre", [child]).to_html()
+    parent = ParentNode("pre", [child])
     return parent

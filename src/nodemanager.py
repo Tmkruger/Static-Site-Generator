@@ -157,7 +157,6 @@ def markdown_to_blocks(markdown):
     blocks = []
     temp = ""
     sections = markdown.split("\n")
-    #print(f"ALL SECTIONS: {sections}")
     start_of_block = True
     for section in sections:
         #print(f"SECTION: {section} | START OF BLOCK?: {start_of_block}")
@@ -180,10 +179,11 @@ def markdown_to_blocks(markdown):
     return blocks
 
 def block_to_blocktype(block):
-    print(f"BLOCKTYPE BLOCK: {block}")
+    #print(f"BLOCKTYPE BLOCK: {block}")
     if re.match(r"^#{1,6} ", block):
         return BlockType.HEADING
-    elif block.startswith("```\n") and block.endswith("```"):
+    elif block.startswith("```") and block.endswith("```"):
+        #print(f"CODE BLOCK: {block}\n!\n!\n!\n\n\n\n\n")
         return BlockType.CODE
     elif re.match(r"^>", block):
         return BlockType.QUOTE

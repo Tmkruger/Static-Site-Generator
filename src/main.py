@@ -19,7 +19,15 @@ the **same** even with inline stuff
 - This is a list
 - with items
 """
-    markdown_to_html_node(markdown)
+
+    block = """
+```
+This is text that _should_ remain
+the **same** even with inline stuff
+```
+"""
+    markdown_to_html_node(block)
+
 
 
 
