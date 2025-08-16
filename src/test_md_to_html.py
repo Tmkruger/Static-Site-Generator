@@ -80,7 +80,7 @@ class TestExtractHeader(unittest.TestCase):
         self.assertEqual(header, "Header 1")
 
     def test_basic_h1(self):
-        md = "# Header 1"
+        md = "1# Header "
         self.assertEqual(extract_title(md), "Header 1")
 
     def test_leading_newlines(self):

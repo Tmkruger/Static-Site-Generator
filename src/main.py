@@ -10,17 +10,10 @@ import shutil
 
 
 def main():
-    file_path = "content/index.md"
-    try:
-        with open(file_path, 'r') as file:
-            content = file.read()
-            #print(content)
-    except FileNotFoundError:
-        print(f"Error: The file at {file_path} was not found.")
-    except Exception as e:
-        print(f"An error occurred: {e}") 
+    if os.path.exists("public"):
+        shutil.rmtree("public")
     static_to_public("static", "public")
-    extract_title(content)
+    generate_page("content/index.md", "template.html", "public/index.html")
 
 def static_to_public(source, destination):
     print(f"SOURCE: {source} | DESTINATION: {destination}")
@@ -51,7 +44,7 @@ def static_to_public(source, destination):
 
 def extract_title(md):
     #CURSED REGEX :O
-    pattern = r"^[ \t]*#\s+([^\r\n]*\S)[ \t]*\r?$"
+    pattern = r"^#(?!#)[ \t]+(.+?)[ \t]*#*[ \t]*$"
     m = re.search(pattern, md, flags=re.MULTILINE)
     if not m:
         raise Exception("No Header")
@@ -59,6 +52,40 @@ def extract_title(md):
 
 def generate_page(from_path, template_path, dest_path):
     print(f"Generating page from {from_path} to {dest_path} using {template_path}")
-    
-
+    try:
+        with open(from_path, "r") as file:
+            markdown_contents = file.read()
+    except FileNotFoundError:
+        print(f"Error: The File {from_path} was not found")
+    except Exception as e:
+        print(f"An error occured: {e}")
+    try:
+        with open(template_path, "r") as file:
+            template_contents = file.read()
+    except FileNotFoundError:
+        print(f"Error: The File {from_path} was not found")
+    except Exception as e:
+        print(f"An error occured: {e}")
+    node = markdown_to_html_node(markdown_contents)
+    html_string = node.to_html()
+    title = extract_title(markdown_contents)
+    contents = template_contents.replace('{{ Title }}', title)
+    print(f"\nHTML STRING: {html_string}\n")
+    contents = contents.replace('{{ Content }}', html_string)
+    file_name = dest_path + "/generated.html"
+    if os.path.exists("public"):
+        try:
+            with open(dest_path, 'w') as file:
+                file.write(contents)
+                print(f"File '{file_name}' successfully written to '{dest_path}'.")
+        except Exception as e:
+            print(f"error 1 {e}")
+    else:
+        os.makedirs(dest_path)
+        try:
+            with open(dest_path, 'w') as file:
+                file.write(contents)
+                print(f"File '{file_name}' successfully written to '{dest_path}'.")
+        except Exception as e:
+            print(f"error 2 {e}")
 main()
