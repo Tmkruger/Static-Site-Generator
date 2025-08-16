@@ -14,7 +14,7 @@ def main():
     try:
         with open(file_path, 'r') as file:
             content = file.read()
-            print(content)
+            #print(content)
     except FileNotFoundError:
         print(f"Error: The file at {file_path} was not found.")
     except Exception as e:
@@ -49,11 +49,16 @@ def static_to_public(source, destination):
         print(f"ADDING {source} TO {destination}")
         shutil.copy(source, destination)
 
-def extract_title(header):
-    if not re.match(r"(?<!#)# (.*)", header):
+def extract_title(md):
+    #CURSED REGEX :O
+    pattern = r"^[ \t]*#\s+([^\r\n]*\S)[ \t]*\r?$"
+    m = re.search(pattern, md, flags=re.MULTILINE)
+    if not m:
         raise Exception("No Header")
-    else:
-        header1 = re.match(r"(?<!#)# (.*)", header).group(0)
-        header1 = header1.lstrip("# ")
-        print(header1)
+    return m.group(1)
+
+def generate_page(from_path, template_path, dest_path):
+    print(f"Generating page from {from_path} to {dest_path} using {template_path}")
+    
+
 main()

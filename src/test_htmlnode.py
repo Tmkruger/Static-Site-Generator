@@ -142,6 +142,3 @@ class TestParentNode(unittest.TestCase):
         table_row3 = ParentNode("tr", [data4,data5,data6])
         table = ParentNode("table", [table_row1,table_row2,table_row3])
         self.assertEqual(table.to_html(), "<table><tr><th>Company</th><th>Contact</th><th>Country</th></tr><tr><td>Alfreds Futterkiste</td><td>Maria Anders</td><td>Germany</td></tr><tr><td>Centro comercial Moctezuma</td><td>Francisco Chang</td><td>Mexico</td></tr></table>")
-
-if __name__ == "__main__":
-    unittest.main()
