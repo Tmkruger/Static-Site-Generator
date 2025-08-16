@@ -14,6 +14,11 @@ def main():
         shutil.rmtree("public")
     static_to_public("static", "public")
     generate_page("content/index.md", "template.html", "public/index.html")
+    generate_page("content/blog/glorfindel/index.md", "template.html", "public/blog/glorfindel/index.html")
+    generate_page("content/blog/tom/index.md", "template.html", "public/blog/tom/index.html")
+    generate_page("content/blog/majesty/index.md", "template.html", "public/blog/majesty/index.html")
+    generate_page("content/contact/index.md", "template.html", "public/contact/index.html")
+
 
 def static_to_public(source, destination):
     print(f"SOURCE: {source} | DESTINATION: {destination}")
@@ -52,6 +57,7 @@ def extract_title(md):
 
 def generate_page(from_path, template_path, dest_path):
     print(f"Generating page from {from_path} to {dest_path} using {template_path}")
+
     try:
         with open(from_path, "r") as file:
             markdown_contents = file.read()
@@ -59,6 +65,7 @@ def generate_page(from_path, template_path, dest_path):
         print(f"Error: The File {from_path} was not found")
     except Exception as e:
         print(f"An error occured: {e}")
+
     try:
         with open(template_path, "r") as file:
             template_contents = file.read()
@@ -66,13 +73,17 @@ def generate_page(from_path, template_path, dest_path):
         print(f"Error: The File {from_path} was not found")
     except Exception as e:
         print(f"An error occured: {e}")
+
     node = markdown_to_html_node(markdown_contents)
     html_string = node.to_html()
     title = extract_title(markdown_contents)
+
     contents = template_contents.replace('{{ Title }}', title)
-    print(f"\nHTML STRING: {html_string}\n")
     contents = contents.replace('{{ Content }}', html_string)
-    file_name = dest_path + "/generated.html"
+
+    file_name = dest_path + "/index.html"
+    out_dir = os.path.dirname(dest_path) or "."
+    os.makedirs(out_dir, exist_ok=True)
     if os.path.exists("public"):
         try:
             with open(dest_path, 'w') as file:
@@ -88,4 +99,5 @@ def generate_page(from_path, template_path, dest_path):
                 print(f"File '{file_name}' successfully written to '{dest_path}'.")
         except Exception as e:
             print(f"error 2 {e}")
-main()
+if __name__ == "__main__":
+    main()

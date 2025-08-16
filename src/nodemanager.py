@@ -88,64 +88,54 @@ def split_nodes_image(old_nodes):
         if not matches:
             converted_nodes.append(node)
             continue
-        #print(f"MATCHES: {matches}")
         for match in matches:
-            #print(f"TEXT: {text}")
-            #print(f"MATCH: {match}")
             image_alt = match[0]
             image_link = match[1]
             sections = text.split(f"![{image_alt}]({image_link})", 1)
             for section in sections:
-                #print(f"SECTION! : {section}!!!")
                 if not extract_markdown_images(section) and section != "":
                     converted_nodes.append(TextNode(section, TextType.TEXT))
-                if TextNode(image_alt, TextType.IMAGE, image_link) not in converted_nodes:
-                    converted_nodes.append(TextNode(image_alt, TextType.IMAGE, image_link))
+                if TextNode("", TextType.IMAGE, {"src": image_link, "alt": image_alt}) not in converted_nodes:
+                    converted_nodes.append(TextNode("", TextType.IMAGE, {"src": image_link, "alt": image_alt}))
             text = sections[len(sections)-1]
-            #print(f"SECTIONS: {sections}")
-            # Add styled (delimited) text
-    #print(f"CONVERTED_NODES : {converted_nodes}")
     return converted_nodes
 
 def split_nodes_link(old_nodes):
-    converted_nodes = []
-    if not old_nodes:
-        raise ValueError("No nodes to split")
+    out = []
+    link_re = re.compile(r'(?<!!)\[([^\[\]]+)\]\(([^()\s]+)\)')  # [text](url), not images
 
     for node in old_nodes:
-        if not isinstance(node, TextNode):
-            raise ValueError("Node is not a TextNode")
-
-        text = node.text
-
-        matches = extract_markdown_links(text)
-        if not matches:
-            converted_nodes.append(node)
+        # Only rewrite plain TEXT nodes
+        if not isinstance(node, TextNode) or node.text_type is not TextType.TEXT:
+            out.append(node)
             continue
-        for match in matches:
-            link_alt = match[0]
-            link_url = match[1]
-            sections = text.split(f"[{link_alt}]({link_url})", 1)
-            for section in sections:
-                if not extract_markdown_links(section) and section != "":
-                    converted_nodes.append(TextNode(section, TextType.TEXT))
-                elif TextNode(link_alt, TextType.LINK, link_url) not in converted_nodes:
-                    converted_nodes.append(TextNode(link_alt, TextType.LINK, link_url))
-            text = sections[len(sections)-1]
-            # Add styled (delimited) text
-    return converted_nodes
+
+        text = node.text or ""
+        pos = 0
+        for m in link_re.finditer(text):
+            start, end = m.span()
+            alt, url = m.group(1), m.group(2)
+
+            if start > pos:
+                out.append(TextNode(text[pos:start], TextType.TEXT))            # keep text before link
+            out.append(TextNode(alt, TextType.LINK, {"href": url}))            # use href, not src
+            pos = end
+
+        if pos < len(text):
+            out.append(TextNode(text[pos:], TextType.TEXT))                     # keep trailing text
+
+    return out
 
 def text_to_textnodes(text):
-    node = TextNode(text, TextType.TEXT)
-    converted_nodes = split_nodes_image([node])
-    for section in converted_nodes:
-        if section.text_type is TextType.TEXT:
-            converted_nodes = split_nodes_link(converted_nodes)
-            converted_nodes = split_nodes_delmiter(converted_nodes, "**", TextType.BOLD)
-            converted_nodes = split_nodes_delmiter(converted_nodes, "*", TextType.ITALIC)
-            converted_nodes = split_nodes_delmiter(converted_nodes, "_", TextType.ITALIC)
-            converted_nodes = split_nodes_delmiter(converted_nodes, "`", TextType.CODE)
-    return converted_nodes
+    # Start with one TEXT node, then transform step-by-step.
+    nodes = [TextNode(text, TextType.TEXT)]
+    nodes = split_nodes_image(nodes)
+    nodes = split_nodes_link(nodes)                 # must run before bold/italic/code
+    nodes = split_nodes_delmiter(nodes, "**", TextType.BOLD)
+    nodes = split_nodes_delmiter(nodes, "*", TextType.ITALIC)
+    nodes = split_nodes_delmiter(nodes, "_", TextType.ITALIC)  
+    nodes = split_nodes_delmiter(nodes, "`", TextType.CODE)
+    return nodes
 
 def find_malformed_delimiters(text, delimiter):
     count = text.count(delimiter)
@@ -176,20 +166,20 @@ def markdown_to_blocks(markdown):
             blocks.append(temp)
             temp = ""
             start_of_block = True
+    if temp:
+        blocks.append(temp)
     return blocks
 
 def block_to_blocktype(block):
-    #print(f"BLOCKTYPE BLOCK: {block}")
     if re.match(r"^#{1,6} ", block):
         return BlockType.HEADING
     elif block.startswith("```") and block.endswith("```"):
-        #print(f"CODE BLOCK: {block}\n!\n!\n!\n\n\n\n\n")
         return BlockType.CODE
     elif re.match(r"^>", block):
         return BlockType.QUOTE
     elif re.match(r"^- ", block):
         return BlockType.U_LIST
-    elif re.match(r"^. ", block):
+    elif re.match(r"^\d+\. ", block):
         return BlockType.O_LIST
     else:
         return BlockType.PARAGRAPH

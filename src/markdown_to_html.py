@@ -21,19 +21,19 @@ def markdown_to_html_node(markdown):
             case BlockType.QUOTE:
                 nodes.append(ParentNode("blockquote", children_nodes))
             case BlockType.U_LIST:
-                child_nodes = []
-                list_items = block.split("\n")
-                for item in list_items:
+                items = block.split("\n")
+                li_nodes = []
+                for item in items:
                     item = strip_md_id(item, block_type)
-                    child_nodes.append(LeafNode("li", item))
-                nodes.append(ParentNode("ul", child_nodes))
+                    li_nodes.append(ParentNode("li", text_to_children(item, BlockType.PARAGRAPH)))
+                nodes.append(ParentNode("ul", li_nodes))
             case BlockType.O_LIST:
-                child_nodes = []
-                list_items = block.split("\n")
-                for item in list_items:
+                items = block.split("\n")
+                li_nodes = []
+                for item in items:
                     item = strip_md_id(item, block_type)
-                    child_nodes.append(LeafNode("li", item))
-                nodes.append(ParentNode("ol", child_nodes))
+                    li_nodes.append(ParentNode("li", text_to_children(item, BlockType.PARAGRAPH)))
+                nodes.append(ParentNode("ol", li_nodes))
             case BlockType.PARAGRAPH:
                 nodes.append(ParentNode("p", children_nodes))
             case _:
@@ -52,7 +52,7 @@ def text_to_children(block, block_type):
     return children
 
 def strip_md_id(text, block_type):
-    text = text.replace("\n", " ")
+    #text = text.replace("\n", " ")
     #print(f"\nTEXT: {text}!!--!!\n")
     match block_type:
         case BlockType.HEADING:
@@ -60,9 +60,11 @@ def strip_md_id(text, block_type):
             text = text.lstrip()
             return text
         case BlockType.QUOTE:
-            return text.lstrip(">")
+            text = text.replace("> ","")
+            text = text.replace(">", "")
+            return text
         case BlockType.O_LIST:
-            return text.lstrip(". ")
+            return text.split(". ")[1]
         case BlockType.U_LIST:
             return text.lstrip("- ")
         case BlockType.PARAGRAPH:
