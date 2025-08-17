@@ -6,21 +6,18 @@ from markdown_to_html import *
 import re
 import os
 import shutil
-
-
+import sys
 
 def main():
+    if len(sys.argv) < 2:
+        base_path = "/"
+    else:
+        base_path = sys.argv[1]
     if os.path.exists("public"):
         shutil.rmtree("public")
-    static_to_public("static", "public")
-    generate_page_recursive("content", "template.html", "public")
-'''
-    generate_page("content/index.md", "template.html", "public/index.html")
-    generate_page("content/blog/glorfindel/index.md", "template.html", "public/blog/glorfindel/index.html")
-    generate_page("content/blog/tom/index.md", "template.html", "public/blog/tom/index.html")
-    generate_page("content/blog/majesty/index.md", "template.html", "public/blog/majesty/index.html")
-    generate_page("content/contact/index.md", "template.html", "public/contact/index.html")
-'''
+    static_to_public("static", "docs")
+    generate_page_recursive("content", "template.html", "docs", base_path)
+
 
 def static_to_public(source, destination):
     #print(f"SOURCE: {source} | DESTINATION: {destination}")
@@ -57,7 +54,7 @@ def extract_title(md):
         raise Exception("No Header")
     return m.group(1)
 
-def generate_page(from_path, template_path, dest_path):
+def generate_page(from_path, template_path, dest_path, base_path):
     print(f"Generating page from {from_path} to {dest_path} using {template_path}")
 
     try:
@@ -82,7 +79,8 @@ def generate_page(from_path, template_path, dest_path):
 
     contents = template_contents.replace('{{ Title }}', title)
     contents = contents.replace('{{ Content }}', html_string)
-
+    contents = contents.replace('href="/','href="{base_path}')
+    contents = contents.replace('src="/','src="{base_path}')
     file_name = dest_path + "/index.html"
     out_dir = os.path.dirname(dest_path) or "."
     os.makedirs(out_dir, exist_ok=True)
@@ -102,10 +100,10 @@ def generate_page(from_path, template_path, dest_path):
         except Exception as e:
             print(f"error 2 {e}")
 
-def generate_page_recursive(dir_path_content, template_path, dest_dir_path):
+def generate_page_recursive(dir_path_content, template_path, dest_dir_path, base_path):
     if os.path.isfile(dir_path_content):
         dest_dir_path = dest_dir_path.rstrip(".md") + ".html"
-        generate_page(dir_path_content, template_path, dest_dir_path)
+        generate_page(dir_path_content, template_path, dest_dir_path, base_path)
     else:
         items_in_dir = os.listdir(dir_path_content)
         print(f"ITEMS_IN_DIR: {items_in_dir}")
@@ -114,12 +112,11 @@ def generate_page_recursive(dir_path_content, template_path, dest_dir_path):
             if os.path.isfile(item):
                 item_path = os.path.join(dir_path_content, item)
                 new_dest_path = os.path.join(dest_dir_path, item).rstrip(".md") + ".html"
-                generate_page(item_path, template_path, new_dest_path)
+                generate_page(item_path, template_path, new_dest_path, base_path)
             else:
                 new_cont_path = os.path.join(dir_path_content, item)
                 new_dest_path = os.path.join(dest_dir_path, item)
-                generate_page_recursive(new_cont_path, template_path, new_dest_path)
-
+                generate_page_recursive(new_cont_path, template_path, new_dest_path, base_path)
 
 if __name__ == "__main__":
     main()
