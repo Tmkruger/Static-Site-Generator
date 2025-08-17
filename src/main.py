@@ -13,38 +13,40 @@ def main():
     if os.path.exists("public"):
         shutil.rmtree("public")
     static_to_public("static", "public")
+    generate_page_recursive("content", "template.html", "public")
+'''
     generate_page("content/index.md", "template.html", "public/index.html")
     generate_page("content/blog/glorfindel/index.md", "template.html", "public/blog/glorfindel/index.html")
     generate_page("content/blog/tom/index.md", "template.html", "public/blog/tom/index.html")
     generate_page("content/blog/majesty/index.md", "template.html", "public/blog/majesty/index.html")
     generate_page("content/contact/index.md", "template.html", "public/contact/index.html")
-
+'''
 
 def static_to_public(source, destination):
-    print(f"SOURCE: {source} | DESTINATION: {destination}")
+    #print(f"SOURCE: {source} | DESTINATION: {destination}")
     if os.path.exists(destination):
         shutil.rmtree(destination)
     os.mkdir(destination)
     if os.path.isfile(source) != True:
         dirs = os.listdir(source)
-        print(f"DIRS: {dirs}")
+        #print(f"DIRS: {dirs}")
         for dir in dirs:
-            print(f"DIR: {dir}")
+            #print(f"DIR: {dir}")
             if dir == ".git":
                 continue
             elif dir == ".DS_Store":
                 continue
             elif os.path.isfile(f"{source}/{dir}") != True:
-                print(f"Going deeper into {dir}")
-                print(f"MAKING DIR {os.path.join(destination, dir)}")
+                #print(f"Going deeper into {dir}")
+                #print(f"MAKING DIR {os.path.join(destination, dir)}")
                 os.mkdir(os.path.join(destination, dir))
                 new_destination = os.path.join(destination, dir)
                 static_to_public(os.path.join(source, dir), new_destination)
             elif os.path.isfile(f"{source}/{dir}") == True:
-                print(f"Copying file {os.path.join(source, dir)} to {destination}")
+                #print(f"Copying file {os.path.join(source, dir)} to {destination}")
                 shutil.copy(os.path.join(source, dir), destination)
     else:
-        print(f"ADDING {source} TO {destination}")
+        #print(f"ADDING {source} TO {destination}")
         shutil.copy(source, destination)
 
 def extract_title(md):
@@ -99,5 +101,25 @@ def generate_page(from_path, template_path, dest_path):
                 print(f"File '{file_name}' successfully written to '{dest_path}'.")
         except Exception as e:
             print(f"error 2 {e}")
+
+def generate_page_recursive(dir_path_content, template_path, dest_dir_path):
+    if os.path.isfile(dir_path_content):
+        dest_dir_path = dest_dir_path.rstrip(".md") + ".html"
+        generate_page(dir_path_content, template_path, dest_dir_path)
+    else:
+        items_in_dir = os.listdir(dir_path_content)
+        print(f"ITEMS_IN_DIR: {items_in_dir}")
+        for item in items_in_dir:
+            # If the item is a file
+            if os.path.isfile(item):
+                item_path = os.path.join(dir_path_content, item)
+                new_dest_path = os.path.join(dest_dir_path, item).rstrip(".md") + ".html"
+                generate_page(item_path, template_path, new_dest_path)
+            else:
+                new_cont_path = os.path.join(dir_path_content, item)
+                new_dest_path = os.path.join(dest_dir_path, item)
+                generate_page_recursive(new_cont_path, template_path, new_dest_path)
+
+
 if __name__ == "__main__":
     main()
