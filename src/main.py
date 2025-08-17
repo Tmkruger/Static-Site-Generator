@@ -2,6 +2,7 @@ from textnode import TextNode , TextType
 from htmlnode import HtmlNode, LeafNode, ParentNode
 from nodemanager import split_nodes_delmiter
 from markdown_to_html import *
+from pathlib import Path
 
 import re
 import os
@@ -55,8 +56,7 @@ def extract_title(md):
     return m.group(1)
 
 def generate_page(from_path, template_path, dest_path, base_path):
-    print(f"Generating page from {from_path} to {dest_path} using {template_path}")
-
+    # Opens Up md file from the from_path
     try:
         with open(from_path, "r") as file:
             markdown_contents = file.read()
@@ -64,7 +64,7 @@ def generate_page(from_path, template_path, dest_path, base_path):
         print(f"Error: The File {from_path} was not found")
     except Exception as e:
         print(f"An error occured: {e}")
-
+    # Opens up the HTML Template File
     try:
         with open(template_path, "r") as file:
             template_contents = file.read()
@@ -73,18 +73,28 @@ def generate_page(from_path, template_path, dest_path, base_path):
     except Exception as e:
         print(f"An error occured: {e}")
 
+    # Convert the md into an html string / get the webpage title
     node = markdown_to_html_node(markdown_contents)
     html_string = node.to_html()
     title = extract_title(markdown_contents)
 
+    # Replace some of the html with proper paths
     contents = template_contents.replace('{{ Title }}', title)
     contents = contents.replace('{{ Content }}', html_string)
-    contents = contents.replace('href="/','href="{base_path}')
-    contents = contents.replace('src="/','src="{base_path}')
+    contents = contents.replace('href="/',f'href="{base_path}')
+    contents = contents.replace('src="/',f'src="{base_path}')
+
+    dest_dir_path = os.path.dirname(dest_path)  # Get the parent directory
+    if dest_dir_path != "":
+        os.makedirs(dest_dir_path, exist_ok=True)  # Create the parent directory
+    to_file = open(dest_path, "w")  # Write to the file
+    to_file.write(contents)
+
+'''
     file_name = dest_path + "/index.html"
     out_dir = os.path.dirname(dest_path) or "."
     os.makedirs(out_dir, exist_ok=True)
-    if os.path.exists("public"):
+    if os.path.exists(dest_path):
         try:
             with open(dest_path, 'w') as file:
                 file.write(contents)
@@ -94,11 +104,12 @@ def generate_page(from_path, template_path, dest_path, base_path):
     else:
         os.makedirs(dest_path)
         try:
-            with open(dest_path, 'w') as file:
+            with open(file_name, 'w') as file:
                 file.write(contents)
                 print(f"File '{file_name}' successfully written to '{dest_path}'.")
         except Exception as e:
             print(f"error 2 {e}")
+'''
 
 def generate_page_recursive(dir_path_content, template_path, dest_dir_path, base_path):
     if os.path.isfile(dir_path_content):
@@ -108,14 +119,15 @@ def generate_page_recursive(dir_path_content, template_path, dest_dir_path, base
         items_in_dir = os.listdir(dir_path_content)
         print(f"ITEMS_IN_DIR: {items_in_dir}")
         for item in items_in_dir:
-            # If the item is a file
-            if os.path.isfile(item):
+            if item.endswith('.md'):
+                new_dest_path = os.path.join(dest_dir_path, item[:-3] + '.html')
+            else:
+                new_dest_path = os.path.join(dest_dir_path, item)
+            if os.path.isfile(os.path.join(dir_path_content, item)):
                 item_path = os.path.join(dir_path_content, item)
-                new_dest_path = os.path.join(dest_dir_path, item).rstrip(".md") + ".html"
                 generate_page(item_path, template_path, new_dest_path, base_path)
             else:
                 new_cont_path = os.path.join(dir_path_content, item)
-                new_dest_path = os.path.join(dest_dir_path, item)
                 generate_page_recursive(new_cont_path, template_path, new_dest_path, base_path)
 
 if __name__ == "__main__":
